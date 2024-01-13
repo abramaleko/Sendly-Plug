@@ -107,6 +107,11 @@ const validateFields = () => {
 }
 
 const submit = () => {
+    //clears all alerts
+    showErrorAlert.value=false;
+    ErrorContents.value=[];
+    showSuccessAlert.value=false;
+
     //validate the fields
     validateFields();
 
