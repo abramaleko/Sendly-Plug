@@ -1,14 +1,10 @@
 # Sendly-Plug
 
-This template should help get you started developing with Vue 3 in Vite.
+Plug In for subcribe/unsubscribe of single/multiple email users for Sendy 
 
-## Recommended IDE Setup
+## How To Use
+It is simple rename the .env.example to .env then enter your base url for your sendy installation also add your sendy api key
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
 
 ## Project Setup
 
