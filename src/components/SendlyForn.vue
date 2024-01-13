@@ -8,6 +8,8 @@ const listOptions = ref([]);
 const operation = ref();
 const operation_type = ref(0);
 const user_email = ref();
+const csv_data=ref();
+const isProcessing=ref(false);
 
 const showSuccessAlert = ref(false);
 const showErrorAlert = ref(false);
@@ -103,40 +105,114 @@ const validateFields = () => {
         return;
     }
 
+    if (operation_type.value == 2 && !csv_data.value) {
+        alert('Missing data from the csv file');
+        return;
+    }
+
 
 }
 
-const submit = () => {
+const submit = async() => {
     //clears all alerts
     showErrorAlert.value=false;
     ErrorContents.value=[];
     showSuccessAlert.value=false;
+
+    isProcessing.value=true;
 
     //validate the fields
     validateFields();
 
     if (operation.value == 1) {
         //subscribe operation
-        operation_type.value == 1 ? singleSubscribeUser() : multipleSubscribeUser();
+        if ( operation_type.value == 1) {
+            const response= await singleSubscribeUser(user_email.value,selectedList.value);
+            
+            if (response == 1) {
+                operation_type.value = 0;
+                user_email.value = '';
+                showSuccessAlert.value = true;
+                isProcessing.value=false;
+
+            } else {
+                ErrorContents.value.push({
+                    'email': user_email.value,
+                    'error': response,
+                });
+                operation_type.value = 0;
+                user_email.value = '';
+                showErrorAlert.value = true;
+                isProcessing.value=false;
+
+            }
+
+        }else{
+           await multipleSubscribeUser();  
+           if (ErrorContents.value.length > 0) {
+                showErrorAlert.value = true;
+                operation_type.value = 0;
+                csv_data.value='';
+            }else{
+                showSuccessAlert.value = true;
+                operation_type.value = 0;
+                csv_data.value='';
+          }
+           isProcessing.value=false;
+ 
+        }
         return;
     }
 
     if (operation.value == 2) {
         //unsubscribe operation
-        operation_type.value == 1 ? singleUnSubscribeUser() : multipleUnSubscribeUser();
-        return;
-    }
+        if ( operation_type.value == 1) {
+            const response=await singleUnSubscribeUser(user_email.value,selectedList.value);
+            if (response == 1) {
+                operation_type.value = 0;
+                user_email.value = '';
+                showSuccessAlert.value = true;
+                isProcessing.value=false;
 
+            } else {
+                ErrorContents.value.push({
+                    'email': user_email.value,
+                    'error': response,
+                });
+                operation_type.value = 0;
+                user_email.value = '';
+                showErrorAlert.value = true;
+                isProcessing.value=false;
+            }
+
+        }else{
+            await multipleUnSubscribeUser();
+            if (ErrorContents.value.length > 0) {
+                showErrorAlert.value = true;
+                operation_type.value = 0;
+                csv_data.value='';
+            }else{
+                showSuccessAlert.value = true;
+                operation_type.value = 0;
+                csv_data.value='';
+          }
+           isProcessing.value=false;
+ 
+        }
+        return;
+
+        }
 
 };
 
-const singleSubscribeUser = async () => {
+const singleSubscribeUser = async (email,list_id,name=null) => {
     //subscribe single user
     try {
         const formData = new FormData();
         formData.append('api_key', apiSecret);
-        formData.append('email', user_email.value);
-        formData.append('list', selectedList.value);
+        formData.append('email', email);
+        formData.append('list', list_id);
+        formData.append('name', name);
         formData.append('boolean', true);
 
         // Make a POST request to your API endpoint to get brand options
@@ -148,20 +224,7 @@ const singleSubscribeUser = async () => {
         if (response.ok) {
             const data = await response.text();
 
-            if (data == 1) {
-                operation_type.value = 0;
-                user_email.value = '';
-                showSuccessAlert.value = true;
-            } else {
-                ErrorContents.value.push({
-                    'email': user_email.value,
-                    'error': data,
-                });
-                operation_type.value = 0;
-                user_email.value = '';
-                showErrorAlert.value = true;
-            }
-
+           return data;
         } else {
             console.error('Failed to submit user info');
         }
@@ -170,17 +233,33 @@ const singleSubscribeUser = async () => {
     }
 }
 
-const multipleSubscribeUser = () => {
+const multipleSubscribeUser = async() => {
     //multiplesubscribeUser
+    for (const data of csv_data.value) {
+        var email,name;
+        email=data.email;
+        if (data.name) { //because sometimes can be unvailable(not required)
+           name=data.name;
+        }
+
+    const response= await singleUnSubscribeUser(email,selectedList.value,name);
+    if (response != 1) {
+                ErrorContents.value.push({
+                    'email': user_email.value,
+                    'error': response,
+                });
+            }
+    }
 }
 
-const singleUnSubscribeUser = async() => {
+const singleUnSubscribeUser = async(email,list_id,name=null) => {
     //unsubscribe single user
     try {
         const formData = new FormData();
         formData.append('api_key', apiSecret);
-        formData.append('email', user_email.value);
-        formData.append('list', selectedList.value);
+        formData.append('email', email);
+        formData.append('list', list_id);
+        formData.append('name', name);
         formData.append('boolean', true);
 
         // Make a POST request to your API endpoint to get brand options
@@ -192,19 +271,7 @@ const singleUnSubscribeUser = async() => {
         if (response.ok) {
             const data = await response.text();
 
-            if (data == 1) {
-                operation_type.value = 0;
-                user_email.value = '';
-                showSuccessAlert.value = true;
-            } else {
-                ErrorContents.value.push({
-                    'email': user_email.value,
-                    'error': data,
-                });
-                operation_type.value = 0;
-                user_email.value = '';
-                showErrorAlert.value = true;
-            }
+            return data;
 
         } else {
             console.error('Failed to submit user info');
@@ -215,8 +282,24 @@ const singleUnSubscribeUser = async() => {
 
 }
 
-const multipleUnSubscribeUser = () => {
+const multipleUnSubscribeUser = async() => {
     //unsubscribe multiple user
+
+        for (const data of csv_data.value) {
+        var email,name;
+        email=data.email;
+        if (data.name) { //because sometimes can be unvailable(not required)
+           name=data.name;
+        }
+
+    const response= await singleUnSubscribeUser(email,selectedList.value,name);
+    if (response != 1) {
+                ErrorContents.value.push({
+                    'email': user_email.value,
+                    'error': response,
+                });
+            }
+    }
 
 }
 
@@ -225,7 +308,7 @@ const multipleUnSubscribeUser = () => {
 </script>
 
 <template>
-    <div class="  transition-colors duration-300">
+    <div class=" transition-colors duration-300">
         <div class="container mx-auto">
             <div class="bg-white shadow rounded-lg p-6">
                 <h1 class="text-xl font-semibold mb-4 text-gray-900 ">Sendly Plug</h1>
@@ -245,7 +328,7 @@ const multipleUnSubscribeUser = () => {
                                                 d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                     </div>
-                                    <p class="px-6 py-4 text-red-900 font-semibold text-base">The following errors occured
+                                    <p class="px-6 py-4 text-red-900 font-semibold text-base">Operation completed with the following errors
                                     </p>
                                 </div>
                                 <div class="px-16 mb-4">
@@ -351,18 +434,46 @@ const multipleUnSubscribeUser = () => {
                         </div>
 
                         <div v-show="operation_type == 2">
-                            <label for="csv-file" class="text-sm font-medium text-gray-900 block mb-2">Upload CSV</label>
-                            <input type="file" id="csv-file"
-                                class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                             <label for="csv-file" class="text-sm font-medium text-gray-900 block mb-2">Upload CSV</label>
+                            <!-- <input type="file" id="csv-file"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"> -->
+                                <vue-csv-import
+                                v-model="csv_data"
+                                :fields="{name: {required: false, label: 'Name'}, email: {required: true, label: 'Email'}}"
+                                >
+                                <vue-csv-toggle-headers class="my-1 text-sm"></vue-csv-toggle-headers>
+                                <vue-csv-errors></vue-csv-errors>
+                                <vue-csv-input class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+
+                                </vue-csv-input>
+                                <vue-csv-map class="mt-4 border border-gray-300 rounded-md p-4 "></vue-csv-map>
+                                </vue-csv-import>
                         </div>
 
                     </div>
-                    <button type="button" @click="submit"
-                        class="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-colors">
-                        Perform Operation
+                    <button type="button" @click="submit"  v-show="!isProcessing"
+                        class="w-full px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-colors">
+                        PERFORM OPERATION
+                    </button>
+
+                    <button type="button" @click="submit" v-show="isProcessing"
+                    class="w-full text-white bg-gray-900 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800
+                    animate-pulse">PROCESSING ...
                     </button>
                 </form>
             </div>
         </div>
 
 </div></template>
+
+<style scoped>
+ select {
+    border-width: 1px;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    margin-top: 0.5rem;
+   margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+ line-height: 1.25rem;
+ }
+</style>
