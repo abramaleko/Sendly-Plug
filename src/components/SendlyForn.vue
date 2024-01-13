@@ -174,8 +174,44 @@ const multipleSubscribeUser = () => {
     //multiplesubscribeUser
 }
 
-const singleUnSubscribeUser = () => {
+const singleUnSubscribeUser = async() => {
     //unsubscribe single user
+    try {
+        const formData = new FormData();
+        formData.append('api_key', apiSecret);
+        formData.append('email', user_email.value);
+        formData.append('list', selectedList.value);
+        formData.append('boolean', true);
+
+        // Make a POST request to your API endpoint to get brand options
+        const response = await fetch(`${apiBaseUrl}/unsubscribe`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (response.ok) {
+            const data = await response.text();
+
+            if (data == 1) {
+                operation_type.value = 0;
+                user_email.value = '';
+                showSuccessAlert.value = true;
+            } else {
+                ErrorContents.value.push({
+                    'email': user_email.value,
+                    'error': data,
+                });
+                operation_type.value = 0;
+                user_email.value = '';
+                showErrorAlert.value = true;
+            }
+
+        } else {
+            console.error('Failed to submit user info');
+        }
+    } catch (error) {
+        console.error('Error submitting', error);
+    }
 
 }
 
@@ -284,7 +320,7 @@ const multipleUnSubscribeUser = () => {
                             </div>
 
                             <div class="flex items-center mb-4">
-                                <input id="unsubscribe" type="radio" name="countries" value="0" v-model="operation"
+                                <input id="unsubscribe" type="radio" name="countries" value="2" v-model="operation"
                                     class="h-4 w-4 border-gray-300 focus:ring-2 focus:ring-blue-300"
                                     aria-labelledby="unsubscribe" aria-describedby="unsubscribe">
                                 <label for="unsubscribe" class="text-sm font-medium text-gray-900 ml-2 block">
